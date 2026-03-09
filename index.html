@@ -144,136 +144,170 @@
     <div id="notification">Reserva enviada con éxito 🚀</div>
 
     <script>
-        // CONFIGURACIÓN DE LA "SHEET MADRE" (Simulada para desarrollo)
-        const DATA = {
-            sucursales: [
-                { id: 'S1', nombre: 'Sucursal Centro', direccion: 'Av. Corrientes 1234', icon: 'fa-city' },
-                { id: 'S2', nombre: 'Sucursal Norte', direccion: 'Calle Florida 500', icon: 'fa-shop' },
-                { id: 'S3', nombre: 'Sucursal Boutique', direccion: 'Palermo Soho 789', icon: 'fa-crown' }
-            ],
-            barberos: [
-                { id: 'B1', nombre: 'Feli', sucursal: 'S1' },
-                { id: 'B2', nombre: 'Nico', sucursal: 'S1' },
-                { id: 'B3', nombre: 'Esteban', sucursal: 'S2' },
-                { id: 'B4', nombre: 'Cristian', sucursal: 'S3' }
-            ],
-            servicios: [
-                { id: 'P1', nombre: 'Corte Premium', precio: 10000, sucursal: ['S1', 'S2', 'S3'] },
-                { id: 'P2', nombre: 'Barba Real', precio: 5000, sucursal: ['S1', 'S3'] }, // Solo en Centro y Boutique
-                { id: 'P3', nombre: 'Combo Full', precio: 14000, sucursal: ['S1', 'S2', 'S3'] }
-            ]
-        };
+    // 1. CONFIGURACIÓN DE LA "SHEET MADRE" Y CONTACTOS
+    // Importante: Poné los números reales con el formato 549...
+    const DATA = {
+        sucursales: [
+            { id: 'S1', nombre: 'Sucursal Centro', direccion: 'Av. Corrientes 1234', icon: 'fa-city' },
+            { id: 'S2', nombre: 'Sucursal Norte', direccion: 'Calle Florida 500', icon: 'fa-shop' },
+            { id: 'S3', nombre: 'Sucursal Boutique', direccion: 'Palermo Soho 789', icon: 'fa-crown' }
+        ],
+        barberos: [
+            { id: 'B1', nombre: 'Feli', sucursal: 'S1', telefono: '5491100000000' }, 
+            { id: 'B2', nombre: 'Nico', sucursal: 'S1', telefono: '5491100000000' },
+            { id: 'B3', nombre: 'Esteban', sucursal: 'S2', telefono: '5491168705261' }, // Tu número
+            { id: 'B4', nombre: 'Cristian', sucursal: 'S3', telefono: '5491100000000' }
+        ],
+        servicios: [
+            { id: 'P1', nombre: 'Corte Premium', precio: 10000, sucursal: ['S1', 'S2', 'S3'] },
+            { id: 'P2', nombre: 'Barba Real', precio: 5000, sucursal: ['S1', 'S3'] },
+            { id: 'P3', nombre: 'Combo Full', precio: 14000, sucursal: ['S1', 'S2', 'S3'] }
+        ]
+    };
 
-        let reserva = {
-            sucursal: null,
-            servicio: null,
-            barbero: null,
-            fecha: null,
-            hora: null
-        };
+    // PEGÁ AQUÍ LA URL QUE TE DIO GOOGLE APPS SCRIPT (El Paso 1)
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwOuWcCbnJwYzwpUcdOq6YHuu7kEnkcyokPV9gcxpCvQSyNF-_TxOinHIHgHl57rpDw0g/exec";
 
-        // 1. RENDERIZAR SUCURSALES
-        function renderBranches() {
-            const container = document.getElementById('branch-container');
-            container.innerHTML = DATA.sucursales.map(s => `
-                <div class="branch-card" onclick="selectBranch('${s.id}', '${s.nombre}')" id="branch-${s.id}">
-                    <i class="fas ${s.icon}"></i>
-                    <h3>${s.nombre}</h3>
-                    <p>${s.direccion}</p>
-                    <span class="status-badge">Disponible hoy</span>
-                </div>
-            `).join('');
-        }
+    let reserva = {
+        sucursal: null,
+        servicio: null,
+        barbero: null,
+        fecha: null,
+        hora: null
+    };
 
-        // 2. SELECCIONAR SUCURSAL Y FILTRAR
-        function selectBranch(id, nombre) {
-            reserva.sucursal = id;
-            document.querySelectorAll('.branch-card').forEach(c => c.classList.remove('selected'));
-            document.getElementById(`branch-${id}`).classList.add('selected');
-            
-            document.getElementById('active-branch-name').innerText = nombre;
-            document.getElementById('step-2').classList.remove('hidden');
-            document.getElementById('step-3').classList.remove('hidden');
+    // --- FUNCIONES DE RENDERIZADO ---
 
-            renderFilteredData(id);
-            window.scrollTo({ top: document.getElementById('step-2').offsetTop - 100, behavior: 'smooth' });
-        }
+    function renderBranches() {
+        const container = document.getElementById('branch-container');
+        container.innerHTML = DATA.sucursales.map(s => `
+            <div class="branch-card" onclick="selectBranch('${s.id}', '${s.nombre}')" id="branch-${s.id}">
+                <i class="fas ${s.icon}"></i>
+                <h3>${s.nombre}</h3>
+                <p>${s.direccion}</p>
+                <span class="status-badge">Disponible hoy</span>
+            </div>
+        `).join('');
+    }
 
-        // 3. FILTRAR SERVICIOS Y BARBEROS POR SUCURSAL
-        function renderFilteredData(sucursalId) {
-            // Filtrar Barberos
-            const barbersCont = document.getElementById('barbers-container');
-            const filteredBarbers = DATA.barberos.filter(b => b.sucursal === sucursalId);
-            barbersCont.innerHTML = filteredBarbers.map(b => `
-                <div class="item-card" onclick="selectItem('barbero', '${b.id}', '${b.nombre}')" id="barbero-${b.id}">
-                    <h4>${b.nombre}</h4>
-                    <p>Barbero Senior</p>
-                </div>
-            `).join('');
+    function selectBranch(id, nombre) {
+        reserva.sucursal = id;
+        document.querySelectorAll('.branch-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById(`branch-${id}`).classList.add('selected');
+        
+        document.getElementById('active-branch-name').innerText = nombre;
+        document.getElementById('step-2').classList.remove('hidden');
+        document.getElementById('step-3').classList.remove('hidden');
 
-            // Filtrar Servicios
-            const servicesCont = document.getElementById('services-container');
-            const filteredServices = DATA.servicios.filter(s => s.sucursal.includes(sucursalId));
-            servicesCont.innerHTML = filteredServices.map(s => `
-                <div class="item-card" onclick="selectItem('servicio', '${s.id}', '${s.nombre}', ${s.precio})" id="servicio-${s.id}">
-                    <h4>${s.nombre}</h4>
-                    <p style="color: var(--accent); font-weight: bold;">$${s.precio}</p>
-                </div>
-            `).join('');
+        renderFilteredData(id);
+        window.scrollTo({ top: document.getElementById('step-2').offsetTop - 100, behavior: 'smooth' });
+    }
 
-            renderHours();
-        }
+    function renderFilteredData(sucursalId) {
+        // Filtrar Barberos
+        const barbersCont = document.getElementById('barbers-container');
+        const filteredBarbers = DATA.barberos.filter(b => b.sucursal === sucursalId);
+        barbersCont.innerHTML = filteredBarbers.map(b => `
+            <div class="item-card" onclick="selectItem('barbero', '${b.id}', '${b.nombre}')" id="barbero-${b.id}">
+                <h4>${b.nombre}</h4>
+                <p>Barbero Senior</p>
+            </div>
+        `).join('');
 
-        function selectItem(tipo, id, nombre, precio = 0) {
-            reserva[tipo] = { id, nombre, precio };
-            document.querySelectorAll(`#${tipo}s-container .item-card`).forEach(c => c.classList.remove('selected'));
+        // Filtrar Servicios
+        const servicesCont = document.getElementById('services-container');
+        const filteredServices = DATA.servicios.filter(s => s.sucursal.includes(sucursalId));
+        servicesCont.innerHTML = filteredServices.map(s => `
+            <div class="item-card" onclick="selectItem('servicio', '${s.id}', '${s.nombre}', ${s.precio})" id="servicio-${s.id}">
+                <h4>${s.nombre}</h4>
+                <p style="color: var(--accent); font-weight: bold;">$${s.precio}</p>
+            </div>
+        `).join('');
+
+        renderHours();
+    }
+
+    function selectItem(tipo, id, nombre, precio = 0) {
+        reserva[tipo] = { id, nombre, precio };
+        document.querySelectorAll(`#${tipo}s-container .item-card`).forEach(c => c.classList.remove('selected'));
+        if(document.getElementById(`${tipo}-${id}`)) {
             document.getElementById(`${tipo}-${id}`).classList.add('selected');
-            updateSummary();
+        }
+        updateSummary();
+    }
+
+    function renderHours() {
+        const hoursCont = document.getElementById('hours-container');
+        const horas = ["10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00"];
+        hoursCont.innerHTML = horas.map(h => `
+            <div class="item-card" style="padding: 10px; text-align: center;" onclick="selectItem('hora', '${h}', '${h}')" id="hora-${h}">
+                ${h}
+            </div>
+        `).join('');
+    }
+
+    function updateSummary() {
+        const sum = document.getElementById('summary-text');
+        if (reserva.sucursal && reserva.servicio && reserva.barbero && reserva.hora) {
+            sum.innerHTML = `
+                📍 <b>${DATA.sucursales.find(s => s.id === reserva.sucursal).nombre}</b><br>
+                ✂️ ${reserva.servicio.nombre} ($${reserva.servicio.precio})<br>
+                👤 Barbero: ${reserva.barbero.nombre}<br>
+                ⏰ Horario: ${reserva.hora.nombre} hs
+            `;
+            document.getElementById('btn-confirm').disabled = false;
+        }
+    }
+
+    // --- LOGICA DE ENVÍO Y NOTIFICACIÓN (PASO 2) ---
+
+    async function confirmarReserva() {
+        const nombreCliente = prompt("Por favor, ingresá tu nombre para confirmar:");
+        if(!nombreCliente) return;
+
+        const barberoInfo = DATA.barberos.find(b => b.id === reserva.barbero.id);
+        const sucursalNombre = DATA.sucursales.find(s => s.id === reserva.sucursal).nombre;
+
+        // 1. Guardar en Google Sheets (Background)
+        const datosTurno = {
+            sucursal: sucursalNombre,
+            servicio: reserva.servicio.nombre,
+            barbero: barberoInfo.nombre,
+            precio: reserva.servicio.precio,
+            cliente: nombreCliente,
+            hora: reserva.hora.nombre
+        };
+
+        try {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datosTurno)
+            });
+        } catch (e) {
+            console.log("Error enviando a la Sheet, pero procedemos con el WhatsApp");
         }
 
-        function renderHours() {
-            const hoursCont = document.getElementById('hours-container');
-            const horas = ["10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00"];
-            hoursCont.innerHTML = horas.map(h => `
-                <div class="item-card" style="padding: 10px; text-align: center;" onclick="selectItem('hora', '${h}', '${h}')" id="hora-${h}">
-                    ${h}
-                </div>
-            `).join('');
-        }
+        // 2. Notificar al Barbero Específico por WhatsApp
+        const msgBarbero = `*¡HOLA ${barberoInfo.nombre.toUpperCase()}, NUEVO TURNO!*%0A` +
+                           `------------------------------%0A` +
+                           `📍 Sucursal: ${sucursalNombre}%0A` +
+                           `👤 Cliente: ${nombreCliente}%0A` +
+                           `✂️ Servicio: ${reserva.servicio.nombre}%0A` +
+                           `⏰ Hora: ${reserva.hora.nombre}%0A` +
+                           `------------------------------%0A` +
+                           `_Turno enviado automáticamente por Fontana Designs_`;
+        
+        // Abrir WhatsApp del barbero seleccionado
+        window.open(`https://wa.me/${barberoInfo.telefono}?text=${msgBarbero}`, '_blank');
 
-        function updateSummary() {
-            const sum = document.getElementById('summary-text');
-            if (reserva.sucursal && reserva.servicio && reserva.barbero && reserva.hora) {
-                sum.innerHTML = `
-                    📍 <b>${DATA.sucursales.find(s => s.id === reserva.sucursal).nombre}</b><br>
-                    ✂️ ${reserva.servicio.nombre} ($${reserva.servicio.precio})<br>
-                    👤 Barbero: ${reserva.barbero.nombre}<br>
-                    ⏰ Horario: ${reserva.hora.nombre} hs
-                `;
-                document.getElementById('btn-confirm').disabled = false;
-            }
-        }
+        alert("¡Turno confirmado! Se le ha enviado un aviso al barbero.");
+        location.reload();
+    }
 
-        function confirmarReserva() {
-            const msg = `*NUEVO TURNO SUCURSAL: ${DATA.sucursales.find(s => s.id === reserva.sucursal).nombre}*%0A` +
-                        `------------------------------%0A` +
-                        `👤 Cliente: [Nombre]%0A` +
-                        `✂️ Servicio: ${reserva.servicio.nombre}%0A` +
-                        `👤 Barbero: ${reserva.barbero.nombre}%0A` +
-                        `⏰ Hora: ${reserva.hora.nombre}%0A` +
-                        `------------------------------%0A` +
-                        `Total: $${reserva.servicio.precio}`;
-            
-            // Aquí enviamos a tu WhatsApp de Fontana Designs o del dueño
-            window.open(`https://wa.me/5491168705261?text=${msg}`, '_blank');
-            
-            const notif = document.getElementById('notification');
-            notif.style.display = 'block';
-            setTimeout(() => notif.style.display = 'none', 4000);
-        }
-
-        // Inicializar
-        renderBranches();
+    // Inicializar la App
+    renderBranches();
     </script>
 </body>
 </html>
